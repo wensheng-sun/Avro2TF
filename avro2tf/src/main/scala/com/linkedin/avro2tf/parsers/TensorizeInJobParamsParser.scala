@@ -39,7 +39,8 @@ case class TensorizeInParams(
   enableCache: Boolean,
   skipConversion: Boolean,
   outputFormat: String,
-  extraColumnsToKeep: Seq[String]
+  extraColumnsToKeep: Seq[String],
+  tensorsSharingFeatureLists: Option[Array[Array[String]]]
 )
 
 /**
@@ -158,7 +159,9 @@ object TensorizeInJobParamsParser {
 
     // Parse the path to external feature list where the user supplied feature metadata is written
     opt[String]("external-feature-list-path")
-      .action((externalFeatureListPath, tensorizeInParams) => tensorizeInParams.copy(externalFeaturesListPath = externalFeatureListPath.trim))
+      .action(
+        (externalFeatureListPath, tensorizeInParams) => tensorizeInParams
+          .copy(externalFeaturesListPath = externalFeatureListPath.trim))
       .text(
         """Optional.
           |The path to external feature list where the user supplied feature metadata is written.""".stripMargin
@@ -239,6 +242,22 @@ object TensorizeInJobParamsParser {
         """Optional.
           |A list of comma separated column names to specify extra columns to keep.""".stripMargin
       )
+
+    opt[String]("tensors-sharing-feature-lists")
+      .valueName("<tensor>,...,<tensor>;<tensor>,...,<tensor>")
+      .action(
+        (tensors, tensorizeInParams) => {
+          val tensor_array = tensors.trim().split(";").map(_.split(",").map(_.trim()))
+          tensorizeInParams.copy(tensorsSharingFeatureLists = Option(tensor_array))
+        }
+      )
+      .optional()
+      .text(
+        """Optional.
+          |Groups of output tensor names separated by semicolon; tensors in the same group are separated by comma.
+          |Tensors within the same group share the same feature list."""
+          .stripMargin
+      )
   }
 
   /**
@@ -266,7 +285,8 @@ object TensorizeInJobParamsParser {
         enableCache = false,
         skipConversion = false,
         outputFormat = AVRO_RECORD,
-        extraColumnsToKeep = Seq.empty
+        extraColumnsToKeep = Seq.empty,
+        tensorsSharingFeatureLists = None
       )
     ) match {
       case Some(params) =>
@@ -274,13 +294,36 @@ object TensorizeInJobParamsParser {
         if (params.inputDateRange.nonEmpty && params.inputDaysRange.nonEmpty) {
           throw new IllegalArgumentException("Please only specify either date range or days range.")
         }
-        if(!params.isTrainMode && params.executionMode == TrainingMode.training){
+        params.tensorsSharingFeatureLists match {
+          case Some(tensor_array) =>
+            if (tensor_array.size == 0 || !tensor_array.forall(_.size > 1)) {
+              throw new IllegalArgumentException(
+                s"Each group in the feature list sharing setting must have at least 1 tensor.\n${
+                  tensor_array
+                    .mkString("; ")
+                }")
+            }
+            val tensors_flatten = tensor_array.flatten
+            if (tensors_flatten.distinct.size != tensors_flatten.size) {
+              throw new IllegalArgumentException(
+                s"Different shared feature list groups can not have overlapping tensors.\n${
+                  tensor_array
+                    .mkString("; ")
+                }")
+            }
+          case None => ()
+        }
+        if (!params.isTrainMode && params.executionMode == TrainingMode.training) {
           params.copy(executionMode = TrainingMode.test)
         } else {
           params
         }
       case None => throw new IllegalArgumentException(
-        s"Parsing the TensorizeIn command line arguments failed.\n" + s"(${args.mkString(", ")}),\n ${parser.usage}")
+        s"Parsing the TensorizeIn command line arguments failed.\n" + s"(${
+          args.mkString(", ")
+        }),\n ${
+          parser.usage
+        }")
     }
   }
 }
