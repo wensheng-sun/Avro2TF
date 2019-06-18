@@ -220,15 +220,15 @@ class FeatureListGeneration {
   }
 
   /**
-   * Write feature list as text file to HDFS
+   * Get groups of tensor names for whom final feature lists should be written for.
    *
    * @param params TensorizeIn parameters specified by user
    * @param fileSystem A file system
-   */
-  private def writeFeatureList(
+   * @return An array of string arrays. Each inner array is a group of tensor(s) that share the same feature list.
+   **/
+  private def getTensorGroupsToWriteFeatureLists(
     params: TensorizeInParams,
-    fileSystem: FileSystem,
-    ntvTensors: Set[String]): Unit = {
+    fileSystem: FileSystem): Array[Array[String]] = {
 
     // first get a set of tensor names for which temporary feature list files have been collected
     val allColsToWriteFeatureLists = new mutable.HashSet[String]()
@@ -244,6 +244,22 @@ class FeatureListGeneration {
     if (allColsToWriteFeatureLists.nonEmpty) {
       tensorGroups ++= allColsToWriteFeatureLists.map(tensor => Array(tensor))
     }
+    tensorGroups.toArray
+  }
+
+  /**
+   * Write feature list as text file to HDFS
+   *
+   * @param params TensorizeIn parameters specified by user
+   * @param fileSystem A file system
+   */
+  private def writeFeatureList(
+    params: TensorizeInParams,
+    fileSystem: FileSystem,
+    ntvTensors: Set[String]): Unit = {
+
+    val tensorGroups = getTensorGroupsToWriteFeatureLists(params, fileSystem)
+    val tmpFeatureListDir = s"${params.workingDir.rootPath}/$TMP_FEATURE_LIST"
     // merge and write feature lists for output tensors with shared feature list setting
     tensorGroups.foreach( // each element is an array containing the output tensor names sharing one feature list
       tensors => {
