@@ -114,12 +114,13 @@ class FeatureListGeneration {
    * @param params TensorizeIn parameters specified by user
    * @param fileSystem A file system
    * @param colsToCollectFeatureList A sequence of columns to collect feature lists
+   * @return A set of output tensor names for NTV tensors
    */
   private def collectAndSaveFeatureList(
     dataFrame: DataFrame,
     params: TensorizeInParams,
     fileSystem: FileSystem,
-    colsToCollectFeatureList: Seq[String]): mutable.HashSet[String] = {
+    colsToCollectFeatureList: Seq[String]): Set[String] = {
 
     import dataFrame.sparkSession.implicits._
     val dataFrameSchema = dataFrame.schema
@@ -183,7 +184,39 @@ class FeatureListGeneration {
       .write
       .partitionBy(COLUMN_NAME)
       .text(tmpFeatureListPath)
-    ntvTensors
+    ntvTensors.toSet
+  }
+
+  /**
+   * Write feature list to disk for a list of (feature entry, count) pairs
+   *
+   * @param p Path to file to create and write
+   * @param featureEntriesWCount a list of (feature entry, count) pairs
+   * @param prefix If provided, write out prefix + comma + feature entry. Otherwise write out feature entry.
+   * @param fileSystem FileSystem
+   */
+  private def writeFeatureEntriesWCountToDisk(
+    p: Path,
+    featureEntriesWCount: Seq[(String, Int)],
+    prefix: Option[String],
+    fileSystem: FileSystem): Unit = {
+
+    val outputStream = fileSystem.create(p)
+    val writer = new OutputStreamWriter(outputStream, UTF_8.name())
+    prefix match {
+      case Some(prefixString)
+      => {
+        featureEntriesWCount.foreach {
+          case (featureEntry, _) => writer.write(s"$prefixString,$featureEntry\n")
+        }
+      }
+      case None => {
+        featureEntriesWCount.foreach {
+          case (featureEntry, _) => writer.write(s"$featureEntry\n")
+        }
+      }
+    }
+    writer.close()
   }
 
   /**
@@ -195,36 +228,7 @@ class FeatureListGeneration {
   private def writeFeatureList(
     params: TensorizeInParams,
     fileSystem: FileSystem,
-    ntvTensors: mutable.HashSet[String]): Unit = {
-
-    /**
-     * Write feature list to disk for a list of (feature entry, count) pairs
-     *
-     * @param p Path to file to create and write
-     * @param featureEntriesWCount a list of (feature entry, count) pairs
-     */
-    def writeFeatureEntriesWCountToDisk(
-      p: Path,
-      featureEntriesWCount: Seq[(String, Int)],
-      prefix: Option[String]): Unit = {
-
-      val outputStream = fileSystem.create(p)
-      val writer = new OutputStreamWriter(outputStream, UTF_8.name())
-      prefix match {
-        case Some(prefixString)
-        => {
-          featureEntriesWCount.foreach {
-            case (featureEntry, _) => writer.write(s"$prefixString,$featureEntry\n")
-          }
-        }
-        case None => {
-          featureEntriesWCount.foreach {
-            case (featureEntry, _) => writer.write(s"$featureEntry\n")
-          }
-        }
-      }
-      writer.close()
-    }
+    ntvTensors: Set[String]): Unit = {
 
     // first get a set of tensor names for which temporary feature list files have been collected
     val allColsToWriteFeatureLists = new mutable.HashSet[String]()
@@ -300,7 +304,7 @@ class FeatureListGeneration {
             else {
               None
             }
-            writeFeatureEntriesWCountToDisk(outputPath, featureList, prefix)
+            writeFeatureEntriesWCountToDisk(outputPath, featureList, prefix, fileSystem)
           }
         )
       }
