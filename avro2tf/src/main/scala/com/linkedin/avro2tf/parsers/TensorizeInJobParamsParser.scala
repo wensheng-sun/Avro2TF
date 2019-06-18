@@ -40,7 +40,7 @@ case class TensorizeInParams(
   skipConversion: Boolean,
   outputFormat: String,
   extraColumnsToKeep: Seq[String],
-  tensorsSharingFeatureLists: Option[Array[Array[String]]]
+  tensorsSharingFeatureLists: Array[Array[String]]
 )
 
 /**
@@ -248,7 +248,7 @@ object TensorizeInJobParamsParser {
       .action(
         (tensors, tensorizeInParams) => {
           val tensor_array = tensors.trim().split(";").map(_.split(",").map(_.trim()))
-          tensorizeInParams.copy(tensorsSharingFeatureLists = Option(tensor_array))
+          tensorizeInParams.copy(tensorsSharingFeatureLists = tensor_array)
         }
       )
       .optional()
@@ -286,7 +286,7 @@ object TensorizeInJobParamsParser {
         skipConversion = false,
         outputFormat = AVRO_RECORD,
         extraColumnsToKeep = Seq.empty,
-        tensorsSharingFeatureLists = None
+        tensorsSharingFeatureLists = Array[Array[String]]()
       )
     ) match {
       case Some(params) =>
@@ -294,24 +294,23 @@ object TensorizeInJobParamsParser {
         if (params.inputDateRange.nonEmpty && params.inputDaysRange.nonEmpty) {
           throw new IllegalArgumentException("Please only specify either date range or days range.")
         }
-        params.tensorsSharingFeatureLists match {
-          case Some(tensor_array) =>
-            if (tensor_array.size == 0 || !tensor_array.forall(_.size > 1)) {
-              throw new IllegalArgumentException(
-                s"Each group in the feature list sharing setting must have at least 1 tensor.\n${
-                  tensor_array
-                    .mkString("; ")
-                }")
-            }
-            val tensors_flatten = tensor_array.flatten
-            if (tensors_flatten.distinct.size != tensors_flatten.size) {
-              throw new IllegalArgumentException(
-                s"Different shared feature list groups can not have overlapping tensors.\n${
-                  tensor_array
-                    .mkString("; ")
-                }")
-            }
-          case None => ()
+        if (!params.tensorsSharingFeatureLists.isEmpty) {
+          val tensor_array = params.tensorsSharingFeatureLists
+          if (tensor_array.size == 0 || !tensor_array.forall(_.size > 1)) {
+            throw new IllegalArgumentException(
+              s"Each group in the feature list sharing setting must have at least 1 tensor.\n${
+                tensor_array
+                  .mkString("; ")
+              }")
+          }
+          val tensors_flatten = tensor_array.flatten
+          if (tensors_flatten.distinct.size != tensors_flatten.size) {
+            throw new IllegalArgumentException(
+              s"Different shared feature list groups can not have overlapping tensors.\n${
+                tensor_array
+                  .mkString("; ")
+              }")
+          }
         }
         if (!params.isTrainMode && params.executionMode == TrainingMode.training) {
           params.copy(executionMode = TrainingMode.test)

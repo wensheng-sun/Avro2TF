@@ -16,11 +16,14 @@ class TensorizeInTest extends WithLocalSparkSession {
    *
    */
   @DataProvider
-  def testData():Array[Array[Any]] = {
+  def testData(): Array[Array[Any]] = {
+
     Array(
-      Array(TENSORIZEIN_CONFIG_PATH_VALUE_SAMPLE, INPUT_TEXT_FILE_PATHS, EXTERNAL_FEATURE_LIST_FILE_NAME_TEXT,
+      Array(
+        TENSORIZEIN_CONFIG_PATH_VALUE_SAMPLE, INPUT_TEXT_FILE_PATHS, EXTERNAL_FEATURE_LIST_FILE_NAME_TEXT,
         WORKING_DIRECTORY_AVRO2TF),
-      Array(TENSORIZEIN_CONFIG_PATH_VALUE_MOVIELENS, INPUT_MOVIELENS_FILE_PATHS, EXTERNAL_FEATURE_LIST_FILE_NAME_MOVIELENS,
+      Array(
+        TENSORIZEIN_CONFIG_PATH_VALUE_MOVIELENS, INPUT_MOVIELENS_FILE_PATHS, EXTERNAL_FEATURE_LIST_FILE_NAME_MOVIELENS,
         WORKING_DIRECTORY_AVRO2TF_MOVIELENS)
     )
   }
@@ -91,20 +94,25 @@ class TensorizeInTest extends WithLocalSparkSession {
    *
    */
   @DataProvider
-  def testDataWithInvalidFeatureListSharing():Array[Array[Any]] = {
+  def testDataWithInvalidFeatureListSharing(): Array[Array[Any]] = {
+
     Array(
-      Array(TENSORIZEIN_CONFIG_PATH_VALUE_SAMPLE, INPUT_TEXT_FILE_PATHS, WORKING_DIRECTORY_AVRO2TF,
+      Array(
+        TENSORIZEIN_CONFIG_PATH_VALUE_SAMPLE, INPUT_TEXT_FILE_PATHS, WORKING_DIRECTORY_AVRO2TF,
         "firstWord,dummyName"),
-      Array(TENSORIZEIN_CONFIG_PATH_VALUE_MOVIELENS, INPUT_MOVIELENS_FILE_PATHS, WORKING_DIRECTORY_AVRO2TF_MOVIELENS,
+      Array(
+        TENSORIZEIN_CONFIG_PATH_VALUE_MOVIELENS, INPUT_MOVIELENS_FILE_PATHS, WORKING_DIRECTORY_AVRO2TF_MOVIELENS,
         "userId,dummyName"
-        )
+      )
     )
   }
+
   /**
    * Test correctly throw exception if invalid tensor names exist in sharing feature list setting
    *
    */
-  @Test(expectedExceptions = Array(classOf[IllegalArgumentException]),
+  @Test(
+    expectedExceptions = Array(classOf[IllegalArgumentException]),
     expectedExceptionsMessageRegExp = "Invalid output tensor name in --tensors-sharing-feature-lists.*",
     dataProvider = "testDataWithInvalidFeatureListSharing")
   def testFailOnInvalidFeatureListSharingSetting(
@@ -112,7 +120,8 @@ class TensorizeInTest extends WithLocalSparkSession {
     inputPath: String,
     workingDirectory: String,
     tensorsSharingFeatureLists: String
-  ):Unit = {
+  ): Unit = {
+
     val tensorizeInConfig = new File(
       getClass.getClassLoader.getResource(tensorizeInConfigPath).getFile
     ).getAbsolutePath
@@ -127,5 +136,4 @@ class TensorizeInTest extends WithLocalSparkSession {
     val tensorizeInTrainingParams = TensorizeInJobParamsParser.parse(trainingParams)
     TensorizeIn.run(session, tensorizeInTrainingParams)
   }
-
 }

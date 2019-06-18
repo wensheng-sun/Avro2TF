@@ -105,7 +105,9 @@
       "outputTensorInfo": {
         "name": "comments_after",
         "dtype": "long",
-        "shape": [-1]
+        "shape": [
+          -1
+        ]
       }
     }
   ]

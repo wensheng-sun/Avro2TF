@@ -42,19 +42,17 @@ class FeatureListGeneration {
       (processExternalFeatureList(params, fileSystem) ++ TensorizeInConfigHelper.getColsWithHashInfo(params))
 
     // Make sure tensors with feature list sharing settings all exist in colsToCollectFeatureList
-    params.tensorsSharingFeatureLists match {
-      case Some(tensorsGroups) => {
-        val tensorsInGroups = tensorsGroups.flatten
-        if (!tensorsInGroups.forall(tensor => colsToCollectFeatureList.contains(tensor))) {
-          throw new IllegalArgumentException(
-            s"Settings in --tensors-sharing-feature-lists conflict with other " +
-              s"settings. Some tensors in --tensors-sharing-feature-lists are not part of those that the job is " +
-              s"collecting feature list for. Most likely, they have external feature list or has hashing setting." +
-              s"Tensors in --tensors-sharing-feature-lists: $tensorsGroups. Tensors the job collect feature list for: " +
-              s"$colsToCollectFeatureList.")
-        }
+    if (!params.tensorsSharingFeatureLists.isEmpty) {
+      val tensorsGroups = params.tensorsSharingFeatureLists
+      val tensorsInGroups = tensorsGroups.flatten
+      if (!tensorsInGroups.forall(tensor => colsToCollectFeatureList.contains(tensor))) {
+        throw new IllegalArgumentException(
+          s"Settings in --tensors-sharing-feature-lists conflict with other " +
+            s"settings. Some tensors in --tensors-sharing-feature-lists are not part of those that the job is " +
+            s"collecting feature list for. Most likely, they have external feature list or has hashing setting." +
+            s"Tensors in --tensors-sharing-feature-lists: $tensorsGroups. Tensors the job collect feature list for: " +
+            s"$colsToCollectFeatureList.")
       }
-      case None => ()
     }
 
     val ntvTensors = collectAndSaveFeatureList(dataFrame, params, fileSystem, colsToCollectFeatureList)
@@ -234,12 +232,10 @@ class FeatureListGeneration {
     allColsToWriteFeatureLists ++= fileSystem.listStatus(new Path(tmpFeatureListDir)).filter(_.isDirectory())
       .filter(_.getPath.getName.startsWith(s"$COLUMN_NAME=")).map(_.getPath.getName.split(s"$COLUMN_NAME=").last)
     val tensorGroups = new mutable.ArrayBuffer[Array[String]]
-    params.tensorsSharingFeatureLists match {
-      case Some(tensorSharingGroups) => {
-        tensorGroups ++= tensorSharingGroups
-        allColsToWriteFeatureLists --= tensorSharingGroups.flatten.toSet
-      }
-      case None => ()
+    if (!params.tensorsSharingFeatureLists.isEmpty) {
+      val tensorSharingGroups = params.tensorsSharingFeatureLists
+      tensorGroups ++= tensorSharingGroups
+      allColsToWriteFeatureLists --= tensorSharingGroups.flatten.toSet
     }
     if (allColsToWriteFeatureLists.nonEmpty) {
       tensorGroups ++= allColsToWriteFeatureLists.map(tensor => Array(tensor))

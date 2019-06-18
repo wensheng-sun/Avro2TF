@@ -39,7 +39,7 @@ object Constants {
   final val REMOVER_COLUMN_NAME_SUFFIX = "remover"
   final val SCHEMA_FILE_NAME = "schemaOutputFile"
   final val SEPARATOR_FEATURE_COUNT = ","
-  final val SPLIT_REGEX = s"${SEPARATOR_FEATURE_COUNT}[0-9]+"+"$"
+  final val SPLIT_REGEX = s"${SEPARATOR_FEATURE_COUNT}[0-9]+" + "$"
   final val TF_RECORD = "tfrecord"
   final val TMP_FEATURE_LIST = "tmpFeatureList"
   final val TENSOR_METADATA_FILE_NAME = "tensor_metadata.json"

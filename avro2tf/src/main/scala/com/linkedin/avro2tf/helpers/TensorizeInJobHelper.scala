@@ -138,16 +138,15 @@ object TensorizeInJobHelper {
         }
     }
     // make sure that all tensors defined in the feature sharing list are valid output tensors
-    params.tensorsSharingFeatureLists match {
-      case Some(tensorsGroups) => {
-        val tensorsInGroups = tensorsGroups.flatten
-        val outputTensorNames = tensors.map(tensor => tensor.outputTensorInfo.name)
-        if (!tensorsInGroups.forall(tensor => outputTensorNames.contains(tensor))) {
-          throw new IllegalArgumentException(s"Invalid output tensor name in --tensors-sharing-feature-lists: " +
+    if (!params.tensorsSharingFeatureLists.isEmpty) {
+      val tensorsGroups = params.tensorsSharingFeatureLists
+      val tensorsInGroups = tensorsGroups.flatten
+      val outputTensorNames = tensors.map(tensor => tensor.outputTensorInfo.name)
+      if (!tensorsInGroups.forall(tensor => outputTensorNames.contains(tensor))) {
+        throw new IllegalArgumentException(
+          s"Invalid output tensor name in --tensors-sharing-feature-lists: " +
             s"$tensorsGroups. Valid names are $outputTensorNames.")
-        }
       }
-      case None => ()
     }
   }
 

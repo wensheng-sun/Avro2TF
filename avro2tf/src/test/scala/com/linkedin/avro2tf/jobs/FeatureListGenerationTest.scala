@@ -23,7 +23,7 @@ class FeatureListGenerationTest extends WithLocalSparkSession {
    * Test if the Feature List Generation job can finish successfully
    *
    */
-  //@Test
+  @Test
   def testFeatureList(): Unit = {
 
     val tensorizeInConfig = new File(

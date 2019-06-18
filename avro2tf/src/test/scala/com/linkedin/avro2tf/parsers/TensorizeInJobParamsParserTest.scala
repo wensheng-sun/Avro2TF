@@ -187,20 +187,22 @@ class TensorizeInJobParamsParserTest {
    */
   @DataProvider()
   def validFeatureSharingSetting(): Array[Array[Any]] = {
+
     Array(
-      Array("a,b", Some(Array(Array("a", "b")))),
-      Array("a,b;", Some(Array(Array("a", "b")))),
-      Array("  a, b ;", Some(Array(Array("a", "b")))),
-      Array(" a, b ; c,d,e;", Some(Array(Array("a", "b"), Array("c","d","e")))),
-      Array(" a, b ; c,d,e ", Some(Array(Array("a", "b"), Array("c","d","e"))))
+      Array("a,b", Array(Array("a", "b"))),
+      Array("a,b;", Array(Array("a", "b"))),
+      Array("  a, b ;", Array(Array("a", "b"))),
+      Array(" a, b ; c,d,e;", Array(Array("a", "b"), Array("c", "d", "e"))),
+      Array(" a, b ; c,d,e ", Array(Array("a", "b"), Array("c", "d", "e")))
     )
   }
+
   /**
    * Test if the command line argument parser can work properly when shared feature lists settings are added
    *
    */
   @Test(dataProvider = "validFeatureSharingSetting")
-  def testParseSharingFeatureLists(config_input: String, parsed_param: Some[Array[Array[String]]]): Unit = {
+  def testParseSharingFeatureLists(config_input: String, parsed_param: Array[Array[String]]): Unit = {
 
     // Get expected TensorizeIn configuration and parameters
     val expectedTensorizeInConfig = getExpectedTensorizeInConfig
@@ -268,7 +270,7 @@ class TensorizeInJobParamsParserTest {
       skipConversion = SKIP_CONVERSION_VALUE.toBoolean,
       outputFormat = AVRO_RECORD.toString,
       extraColumnsToKeep = Seq.empty,
-      tensorsSharingFeatureLists = None
+      tensorsSharingFeatureLists = Array[Array[String]]()
     )
   }
 
