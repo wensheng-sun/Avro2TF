@@ -55,7 +55,8 @@ class FeatureListGeneration {
       }
     }
 
-    val ntvTensors = collectAndSaveFeatureList(dataFrame, params, fileSystem, colsToCollectFeatureList)
+    collectAndSaveFeatureList(dataFrame, params, fileSystem, colsToCollectFeatureList)
+    val ntvTensors = getNtvTensors(dataFrame, colsToCollectFeatureList)
     writeFeatureList(params, fileSystem, ntvTensors)
 
     fileSystem.close()
@@ -108,6 +109,29 @@ class FeatureListGeneration {
   }
 
   /**
+   * Get output tensor names for output tensors of name,term,value format
+   *
+   * @param dataFrame Input data Spark DataFrame
+   * @param colsToCollectFeatureList A sequence of columns to collect feature lists
+   * @return A set of output tensor names for NTV tensors
+   */
+  private def getNtvTensors(
+    dataFrame: DataFrame,
+    colsToCollectFeatureList: Seq[String]): Set[String] = {
+
+    val dataFrameSchema = dataFrame.schema
+    val ntvTensors = new mutable.HashSet[String]()
+    colsToCollectFeatureList.foreach {
+      colName => {
+        if (CommonUtils.isArrayOfNTV(dataFrameSchema(colName).dataType)) {
+          ntvTensors += colName
+        }
+      }
+    }
+    ntvTensors.toSet
+  }
+
+  /**
    * Collect and save feature list
    *
    * @param dataFrame Input data Spark DataFrame
@@ -120,7 +144,7 @@ class FeatureListGeneration {
     dataFrame: DataFrame,
     params: TensorizeInParams,
     fileSystem: FileSystem,
-    colsToCollectFeatureList: Seq[String]): Set[String] = {
+    colsToCollectFeatureList: Seq[String]): Unit = {
 
     import dataFrame.sparkSession.implicits._
     val dataFrameSchema = dataFrame.schema
@@ -128,15 +152,6 @@ class FeatureListGeneration {
     fileSystem.delete(new Path(tmpFeatureListPath), ENABLE_RECURSIVE)
     val outputTensorDataTypes = TensorizeInConfigHelper.getOutputTensorDataTypes(params)
 
-    // collect NTV tensors
-    val ntvTensors = new mutable.HashSet[String]()
-    colsToCollectFeatureList.foreach {
-      colName => {
-        if (CommonUtils.isArrayOfNTV(dataFrameSchema(colName).dataType)) {
-          ntvTensors += colName
-        }
-      }
-    }
     dataFrame.flatMap {
       row => {
         colsToCollectFeatureList.flatMap {
@@ -184,7 +199,6 @@ class FeatureListGeneration {
       .write
       .partitionBy(COLUMN_NAME)
       .text(tmpFeatureListPath)
-    ntvTensors.toSet
   }
 
   /**
