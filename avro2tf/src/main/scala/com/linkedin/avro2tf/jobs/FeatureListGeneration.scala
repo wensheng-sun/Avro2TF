@@ -282,8 +282,12 @@ class FeatureListGeneration {
                 .foreach(
                   line => {
                     // the format of each line is feature_entry,count
+                    // first get feature_entry, if need process prefix (ntv), remove prefix from feature_entry, make
+                    // sure prefix is unique
+                    val lineWithoutCount = line.split(SPLIT_REGEX).head
                     val featureEntry = if (needProcessPrefix) {
-                      val prefixCurrentLine = line.split(SPLIT_REGEX).head.split(',').head
+                      val prefixSplit = lineWithoutCount.split(',')
+                      val prefixCurrentLine = prefixSplit.head
                       if (prefix.isEmpty) {
                         prefix += prefixCurrentLine
                         tensorsWithPrefix += tensor -> prefixCurrentLine
@@ -296,10 +300,10 @@ class FeatureListGeneration {
                           )
                         }
                       }
-                      line.split(SPLIT_REGEX).head.split(',').last
+                      prefixSplit.last
                     }
                     else {
-                      line.split(SPLIT_REGEX).head
+                      lineWithoutCount
                     }
                     val count = line.split(SEPARATOR_FEATURE_COUNT).last.toInt
                     featureEntriesWCount(featureEntry) += count
